@@ -27,19 +27,20 @@ You should be able to call the program with:
 
 ``` 
 cytoseen -h
-usage: cytoseen [-h] [--version] --info INFO [--min_cov MIN_COV] [--max_cov MAX_COV] [--max_missing MAX_MISSING] --outdir OUTDIR --basedir BASEDIR
+usage: cytoseen [-h] [--version] --info INFO [--min_cov MIN_COV] [--max_cov MAX_COV] [--max_missing MAX_MISSING] --outdir OUTDIR --covdir COVDIR
 
-Run CytoSeen analysis.
+Create CytoSeen 5mC Reproducibility Reports
 
 options:
   -h, --help            show this help message and exit
   --version             show program's version number and exit
-  --info INFO           Path to the CSV file
-  --min_cov MIN_COV     Minimum site coverage. [default=20]
-  --max_cov MAX_COV     Maximum site coverage. [default=200]
+  --info INFO           Path to the info CSV file
+  --min_cov MIN_COV     Minimum site coverage [default=20]
+  --max_cov MAX_COV     Maximum site coverage [default=200]
   --max_missing MAX_MISSING
-                        Maximum missing data threshold. [default = 0.1]
-  --outdir OUTDIR       Existing output directory
+                        Maximum missing data threshold [default=0.1]
+  --outdir OUTDIR       Output directory
+  --covdir COVDIR       Directory to the Bismark coverage files
 ```
 
 ### Usage
@@ -89,12 +90,12 @@ retained_data <- combined_data[site %in% retained_sites]
 
 ### Outputs
 
-The script does not produce any console output during processing because it renders the output into a RMarkdown `.html` report. After the script finishes successfully, all the results will be compiled into a `CytoSeen.html` report within the specified output directory. 
+The script does not produce any console output during processing because it renders the output into a RMarkdown `.html` report. After the script finishes successfully, all the results will be compiled into a [CytoSeen.html](examples/outdir/CytoSeen.html) report within the specified output directory. 
+
+* `CytoSeen.html` Compiled report, open in any browser. 
 
 All figures and tables are also saved as respective `.pdf` and `.csv`:
 
-
-* `CytoSeen.html` Compiled report, open in any browser. 
 * `site_counts.pdf` How many sites are retained based on the number of libraries sequenced at coverage and missingness thresholds. 
 * `missingness.pdf` How do variable missngness thresholds impact site retainment? 
 * `Sample_Missingness.csv` How many sites are retained for each library after coverage filters? 
