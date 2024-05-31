@@ -1,4 +1,4 @@
-![CytoSeen](/resources/Logo.png)
+![CytoSeen](/examples/Logo.png)
 
 Simple tool for assessing technical repeatability and batch effects using Bismark coverage files. 
 
