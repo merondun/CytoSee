@@ -2,6 +2,11 @@
 
 Simple tool for assessing technical repeatability and batch effects using Bismark coverage files. 
 
+> What's it for?!
+
+* Assessing missingness across shared sites among Bismark coverage files
+* Validating technical replicates by ensuring intra-sample variation is higher than inter-sample variation
+* Quantifying batch effects with PCA and R^2 
 
 ## Methylation Reproducibility Reports
 
