@@ -27,6 +27,7 @@ requirements:
     - r-vegan
     - r-rmarkdown
     - r-knitr
+    - r-ggpubr
     - r-r.utils
   run:
     - python >=3.6
@@ -40,6 +41,7 @@ requirements:
     - r-vegan
     - r-rmarkdown
     - r-knitr
+    - r-ggpubr
     - r-r.utils
 
 test:
