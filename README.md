@@ -60,6 +60,7 @@ cytoseen --info examples/info.csv --outdir examples/outdir/ --covdir examples/bi
 Which should print some markdown syntax and create the output files in the outdir directory. 
 
 
+
 ### Usage
 
 **INPUTS:**
@@ -104,6 +105,7 @@ threshold <- floor(nrow(t) * (1 - params$max_missing))
 # Identify sites that appear in at least the threshold number of samples
 retained_sites <- site_counts[N >= threshold, site]
 retained_data <- combined_data[site %in% retained_sites]
+```
 
 **Logic for assessing inter- and intra- correlations:**
 
@@ -121,8 +123,6 @@ retained_data <- combined_data[site %in% retained_sites]
 3. Create a PCA and output 4 PCs using [FactoMineR](http://factominer.free.fr/)
 4. Use [vegan](https://github.com/vegandevs/vegan) for RDA: `(PC_axes ~ batchid)`
 
-
-```
 
 ### Outputs
 
