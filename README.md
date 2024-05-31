@@ -47,9 +47,9 @@ options:
 
 **INPUTS:**
 
-This script primarily analyzes variation between technical replicates and batches, so *a separate .cov.gz is necessary for each library*. This means that you will need to align and extract your files for each replicate individually. This is tested with CpG data, but will work with any `.cov.gz` formatted inputs. 
+This script analyzes variation between technical replicates and batches, so *a separate .cov.gz is necessary for each library*. This means that you will need to align and extract your files for each replicate individually. This is tested with CpG data, but will work with any `.cov.gz` formatted inputs. 
 
-The script takes a simple input, **comma separated**, with details for each library to analyze. The four columns with headers are as follows:
+The script takes a simple input table with details of each libray - **comma separated**. The four columns with headers are:
 
 * `biscov`: **full path** to the library [Bismark cov.gz](https://felixkrueger.github.io/Bismark/bismark/methylation_extraction/) file. This file has format (chr, pos, pos, methylation percent, read count methylated, read count unmethylated).  
 * `runid`: library ID. This is a distinct ID given to each library, synonymous with a 'RUN' ID from the NCBI.  
@@ -91,7 +91,7 @@ retained_data <- combined_data[site %in% retained_sites]
 
 ### Outputs
 
-The script does not produce any console output during processing because it renders the output into a RMarkdown `.html` report. After the script finishes successfully, all the results will be compiled into a [CytoSeen.html](examples/outdir/CytoSeen.html) report within the specified output directory. 
+The script does not produce any console output during processing because it renders the output into a RMarkdown `.html` report. After the script finishes successfully, all the results will be compiled into a [CytoSeen.html](examples/outdir/CytoSeen.html) report within the specified output directory (open in browser). 
 
 * `CytoSeen.html` Compiled report, open in any browser. 
 
@@ -118,7 +118,7 @@ NW_019780497.1,2010,5,4,B2V8841_BL_ADL_F__SRR25143965
 NW_019783468.1,1554,51,32,B2V8841_BL_ADL_F__SRR25143965
 ```
 
-You can create a BSobj from this object, e.g. as used in the package [DSS](https://www.bioconductor.org/packages/release/bioc/vignettes/DSS/inst/doc/DSS.html), using something like this:
+For downstream analyses, you can also create a BSobj from this object, e.g. as used in the package [DSS](https://www.bioconductor.org/packages/release/bioc/vignettes/DSS/inst/doc/DSS.html), with this:
 
 ```
 methdat <- fread(BSobj_methylationcounts.csv.gz) %>% as.data.frame
@@ -158,7 +158,7 @@ For any problems please open an issue or contact Justin Merondun: heritabilites 
 * You can run code chunks in R directly with the `/cytoseen/cytoseen_Rtemplate.R` script, which relies on the following packages. Easily installable with conda/mamba:
 
 ```
-mamba create -n test3 r-tidyverse r-boot r-missmda r-ggpubr r-data.table r-rmarkdown r-knitr r-r.utils r-vegan r-optparse
+mamba create -n CytoSeen r-tidyverse r-boot r-missmda r-ggpubr r-data.table r-rmarkdown r-knitr r-r.utils r-vegan r-optparse
 ```
 
 
