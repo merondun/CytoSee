@@ -1,2 +1,0 @@
-[console_scripts]
-cytoseen = cytoseen.cytoseen:main
