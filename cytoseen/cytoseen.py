@@ -5,7 +5,7 @@ import os
 import sys
 
 # Version
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 def main():
     parser = argparse.ArgumentParser(description='Create CytoSeen 5mC Reproducibility Reports')
@@ -23,14 +23,17 @@ def main():
     outdir_path = os.path.abspath(args.outdir)
     covdir_path = os.path.abspath(args.covdir)
 
-    # Check if the R script exists at the expected location
-    script_path = 'render_report.R'
-    if not os.path.exists(script_path):
-        print("The file 'render_report.R' does not exist in the expected directory.")
-        script_path = input("Please enter the full path to the 'render_report.R' file: ")
+    # Try to find the R script in CONDA_PREFIX/bin, then current working directory
+    conda_prefix = os.getenv('CONDA_PREFIX')
+    script_path = os.path.join(conda_prefix, 'bin', 'render_report.R') if conda_prefix else None
+    if not script_path or not os.path.exists(script_path):
+        script_path = 'render_report.R'
         if not os.path.exists(script_path):
-            print("render_report.R does not exist at the specified path.", file=sys.stderr)
-            sys.exit(1)
+            print("The file 'render_report.R' does not exist in the expected directory.")
+            script_path = input("Please enter the full path to the 'render_report.R' file: ")
+            if not os.path.exists(script_path):
+                print("render_report.R does not exist at the specified path.", file=sys.stderr)
+                sys.exit(1)
 
     # Run
     command = [
