@@ -20,7 +20,7 @@ cp $CONDA_PREFIX/lib/python3.11/site-packages/cytoseen/cytoseen.Rmd $CONDA_PREFI
 chmod +x $CONDA_PREFIX/bin/*
 ```
 
-:warning **IMPORTANT!!!**: the command `cytoseen` needs access to two scripts: `render_report.R` and `cytoseen.Rmd`. Ensure you `cp` them above (either from the `site_packages`, or from the git repo). 
+:warning: **IMPORTANT!!!**: the command `cytoseen` needs access to two scripts: `render_report.R` and `cytoseen.Rmd`. Ensure you `cp` them above (either from the `site_packages`, or from the git repo). 
 
 
 You should be able to call the program with:
@@ -94,8 +94,7 @@ The script does not produce any console output during processing because it rend
 All figures and tables are also saved as respective `.pdf` and `.csv`:
 
 
-
-
+* `CytoSeen.html` Compiled report, open in any browser. 
 * `site_counts.pdf` How many sites are retained based on the number of libraries sequenced at coverage and missingness thresholds. 
 * `missingness.pdf` How do variable missngness thresholds impact site retainment? 
 * `Sample_Missingness.csv` How many sites are retained for each library after coverage filters? 
@@ -147,18 +146,21 @@ BSobj
 
 ### Help & Contact
 
-The primary `.Rmd` script can be easily debugged in RStudio. The individual code chunks could be easily run individually as standard Rscripts.
+The primary `.Rmd` script can be easily debugged in RStudio and run line-by-line using the `/cytoseen/cytoseen_Rtemplate.R` script. 
 
 For any problems please open an issue or contact Justin Merondun: heritabilites [at] gmail.com
 
 
 ### FAQ
 
-You can run code chunks in R directly with the `/cytoseen/cytoseen_Rtemplate.R` script, which relies on the following packages
-- dplyr, ggplot2, data.table, boot, tidyr, missMDA, FactoMineR, ggpubr, viridis, vegan
+* You can run code chunks in R directly with the `/cytoseen/cytoseen_Rtemplate.R` script, which relies on the following packages. Easily installable with conda/mamba:
+
+```
+mamba create -n test3 r-tidyverse r-boot r-missmda r-ggpubr r-data.table r-rmarkdown r-knitr r-r.utils r-vegan r-optparse
+```
 
 
-It is recommended to use the conda environment for R package version control, but here is a sessionInfo from a version that works:
+* It is recommended to use the conda environment for R package version control, but here is a sessionInfo from a version that works:
 
 ```
 sessionInfo()
@@ -182,25 +184,26 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
- [1] vegan_2.6-6.1     lattice_0.22-6    permute_0.9-7     viridis_0.6.5     viridisLite_0.4.2 ggpubr_0.6.0     
- [7] FactoMineR_2.10   missMDA_1.19      tidyr_1.3.1       boot_1.3-30       data.table_1.15.2 ggplot2_3.5.1    
-[13] dplyr_1.1.4       optparse_1.7.5   
+ [1] vegan_2.6-6.1     lattice_0.22-6    permute_0.9-7     viridisLite_0.4.2 FactoMineR_2.10   ggpubr_0.6.0     
+ [7] missMDA_1.19      boot_1.3-30       data.table_1.15.2 lubridate_1.9.3   forcats_1.0.0     stringr_1.5.1    
+[13] dplyr_1.1.4       purrr_1.0.2       readr_2.1.5       tidyr_1.3.1       tibble_3.2.1      ggplot2_3.5.1    
+[19] tidyverse_2.0.0  
 
 loaded via a namespace (and not attached):
  [1] tidyselect_1.2.1     fastmap_1.2.0        TH.data_1.1-2        digest_0.6.35        rpart_4.1.23        
- [6] estimability_1.5     lifecycle_1.0.4      cluster_2.1.6        multcompView_0.1-10  survival_3.6-4      
-[11] magrittr_2.0.3       compiler_4.3.2       rlang_1.1.3          tools_4.3.2          utf8_1.2.4          
-[16] knitr_1.45           ggsignif_0.6.4       htmlwidgets_1.6.4    scatterplot3d_0.3-44 multcomp_1.4-25     
-[21] abind_1.4-5          withr_3.0.0          purrr_1.0.2          nnet_7.3-19          grid_4.3.2          
+ [6] timechange_0.3.0     estimability_1.5     lifecycle_1.0.4      cluster_2.1.6        multcompView_0.1-10 
+[11] survival_3.6-4       magrittr_2.0.3       compiler_4.3.2       rlang_1.1.3          tools_4.3.2         
+[16] utf8_1.2.4           knitr_1.45           ggsignif_0.6.4       htmlwidgets_1.6.4    scatterplot3d_0.3-44
+[21] abind_1.4-5          multcomp_1.4-25      withr_3.0.0          nnet_7.3-19          grid_4.3.2          
 [26] fansi_1.0.6          jomo_2.7-6           xtable_1.8-4         colorspace_2.1-0     mice_3.16.0         
 [31] emmeans_1.10.2       scales_1.3.0         iterators_1.0.14     MASS_7.3-60          flashClust_1.01-2   
-[36] cli_3.6.2            mvtnorm_1.2-5        generics_0.1.3       rstudioapi_0.15.0    getopt_1.20.4       
+[36] cli_3.6.2            mvtnorm_1.2-5        generics_0.1.3       rstudioapi_0.15.0    tzdb_0.4.0          
 [41] minqa_1.2.7          splines_4.3.2        parallel_4.3.2       vctrs_0.6.5          glmnet_4.1-8        
-[46] Matrix_1.6-5         sandwich_3.1-0       carData_3.0-5        car_3.1-2            mitml_0.4-5         
-[51] ggrepel_0.9.5        rstatix_0.7.2        foreach_1.5.2        glue_1.7.0           nloptr_2.0.3        
-[56] pan_1.9              codetools_0.2-20     DT_0.33              shape_1.4.6.1        gtable_0.3.5        
-[61] lme4_1.1-35.3        munsell_0.5.1        tibble_3.2.1         pillar_1.9.0         htmltools_0.5.8.1   
-[66] R6_2.5.1             doParallel_1.0.17    backports_1.5.0      leaps_3.1            broom_1.0.6         
-[71] Rcpp_1.0.12          gridExtra_2.3        coda_0.19-4          nlme_3.1-164         mgcv_1.9-1          
-[76] xfun_0.41            zoo_1.8-12           pkgconfig_2.0.3    
+[46] Matrix_1.6-5         sandwich_3.1-0       carData_3.0-5        car_3.1-2            hms_1.1.3           
+[51] rstatix_0.7.2        mitml_0.4-5          ggrepel_0.9.5        foreach_1.5.2        glue_1.7.0          
+[56] nloptr_2.0.3         pan_1.9              codetools_0.2-20     DT_0.33              stringi_1.8.4       
+[61] gtable_0.3.5         shape_1.4.6.1        lme4_1.1-35.3        munsell_0.5.1        pillar_1.9.0        
+[66] htmltools_0.5.8.1    R6_2.5.1             doParallel_1.0.17    backports_1.5.0      leaps_3.1           
+[71] broom_1.0.6          Rcpp_1.0.12          coda_0.19-4          nlme_3.1-164         mgcv_1.9-1          
+[76] xfun_0.41            zoo_1.8-12           pkgconfig_2.0.3     
 ```

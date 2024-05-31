@@ -1,6 +1,6 @@
 package:
   name: cytoseen
-  version: "0.1.1"
+  version: "0.1.2"
 
 source:
   path: .
@@ -19,34 +19,28 @@ requirements:
     - pip
     - r-base
     - r-optparse
-    - r-dplyr
-    - r-ggplot2
+    - r-tidyverse
     - r-data.table
     - r-boot
     - r-tidyr
     - r-missmda
-    - r-factominer
-    - r-ggpubr
-    - r-viridis
     - r-vegan
     - r-rmarkdown
     - r-knitr
+    - r-r.utils
   run:
     - python >=3.6
     - r-base
     - r-optparse
-    - r-dplyr
-    - r-ggplot2
+    - r-tidyverse
     - r-data.table
     - r-boot
     - r-tidyr
     - r-missmda
-    - r-factominer
-    - r-ggpubr
-    - r-viridis
     - r-vegan
     - r-rmarkdown
     - r-knitr
+    - r-r.utils
 
 test:
   imports:

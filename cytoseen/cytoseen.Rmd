@@ -1,0 +1,529 @@
+---
+output:
+  html_document:
+  toc: true
+  toc_depth: 2
+  code_folding: hide
+params:
+  info: "CytoSeen/examples/info.csv"
+  min_cov: 20
+  max_cov: 200
+  max_missing: 0.1
+  outdir: "CytoSeen/examples/outdir"
+  covdir: "CytoSeen/examples/biscov"
+---
+
+# CytoSeen Report
+
+This report compiled libraries and has details pertaining to:
+
+- [Sites retained after filtering for missingness threshold.](#site-retainment)
+- [Sites retained using various missingness thresholds.](#site-missingness-sensitivity)
+- [Intra- vs Inter- sample correlations of 5mC.](#correlations)
+- [PCA of batch effects.](#batch-effects)
+
+```{r setup, echo=FALSE,include=FALSE}
+library(optparse)
+library(tidyverse)
+library(data.table)
+library(boot)
+library(missMDA)
+library(ggpubr)
+library(FactoMineR)
+library(viridisLite)
+library(vegan)
+```
+
+```{r import,echo=FALSE,include=FALSE}
+##### Import data ##### 
+t <- fread(params$info)
+
+# Init list to store results
+results_list <- list()
+
+# Loop through each file
+for (i in 1:nrow(t)) {
+  file <- t$biscov[i]
+  runid <- t$runid[i]
+  bioid <- t$bioid[i]
+  batchid <- t$batchid[i]
+  
+  cat('Reading in file:', file, '\n')
+  
+  # Read in .cov.gz file
+  cov_path <- file.path(params$covdir, file) 
+  tab <- fread(cov_path, header = FALSE)
+  setnames(tab, c('chr', 'start', 'end', 'Percent_5mC', 'countM', 'countU'))
+  
+  # Calculate coverage and filter based on min_cov and max_cov
+  tab[, Coverage := countM + countU]
+  tab <- tab[Coverage >= params$min_cov & Coverage <= params$max_cov]
+  
+  # Create site identifier and calculate percentage
+  tab[, site := paste0(chr, '@', start)]
+  tab[, Percent_5mC := Percent_5mC / 100]
+  
+  # Subset interesting columns
+  result <- tab[, .(site, Percent_5mC, countM, countU)]
+  result[, `:=`(runid = runid, bioid = bioid, batchid = batchid)]
+  
+  # Add result to the list
+  results_list[[i]] <- result
+  
+  cat('Successfly imported:', file, '\n')
+}
+
+cat('Successfully imported: ',length(results_list),' runs\n')
+num_runs <- length(results_list)
+prop_missing <- params$max_missing*100
+
+```
+  
+In this analysis there were **`r num_runs` libraries** with a **maximum of `r prop_missing`% missing libraries** to retain a site. Each site was sequenced to at least **`r params$min_cov`X** and at most **`r params$max_cov`X**. 
+  
+## Site Retainment
+
+Filter according to the specified **`r params$max_missing` missingness** threshold. 
+
+```{r overlap, echo=FALSE, include=FALSE}
+# Combine all data tables in the list into one
+combined_data <- rbindlist(results_list)
+
+# Calculate the number of samples each site appears in
+site_counts <- combined_data[, .N, by = site]
+
+# Calculate the threshold for retaining sites, always round down 
+threshold <- floor(nrow(t) * (1 - params$max_missing))
+
+# Identify sites that appear in at least the threshold number of samples
+retained_sites <- site_counts[N >= threshold, site]
+retained_data <- combined_data[site %in% retained_sites]
+
+if (length(retained_sites) == 0) {
+  stop("There are no retained sites fitting missingness and coverage specifications!")
+}
+
+# How many kept?
+all_overlapped <- nrow(site_counts)
+retained <- length(retained_sites)
+prop_retained <- round((length(retained_sites)/nrow(site_counts)),3)*100
+cat('After filtering for',params$max_missing*100,'% missingness, retained',length(retained_sites),'of',nrow(site_counts),'sites captured at ',params$min_cov,'X coverage, so',round((length(retained_sites)/nrow(site_counts)),3)*100,'% remaining\n')
+
+#Create the BSobj input file
+bsobj <- as.data.frame(retained_data)
+setDT(bsobj)
+bsobj[, c('chr', 'pos') := tstrsplit(site, '@', fixed = TRUE, type.convert = TRUE)][, reads  := countM + countU]
+saveobj <- bsobj[, c('chr', 'pos', 'reads', 'countM', 'runid')]
+fwrite(saveobj,file.path(params$outdir,"BSobj_methylationcounts.csv.gz"),quote=F,sep=',',col.names=TRUE,row.names=FALSE)
+```
+
+A total of **`r all_overlapped`** sites were assayed. After retaining sites missing in less than `r params$max_missing` samples, there were **`r retained` sites**, leaving **`r prop_retained`%** of sites.
+
+\
+
+```{r plot-missing,fig.width=7,fig.height=5,echo=FALSE,message=FALSE,fig.align='center',fig.cap='Site missingness across all samples.'}
+# Plot how many coverage-filtered sites are sequenced across all samples
+site_count_fig <- site_counts %>% 
+  ggplot(aes(x=N))+
+  geom_vline(xintercept=threshold,lty=2,col='blue')+
+  annotate("label",
+           x = threshold,
+           y = Inf,
+           vjust = 1.5,size=3,
+           label = paste0('N = ', threshold, ' samples\nn = ', length(retained_sites), ' sites'),
+           color = 'black') +
+  geom_histogram(bins = 30)+
+  ylab('Sites Covered')+xlab('Number of Libraries')+
+  theme_bw(base_size=8)
+site_count_fig + theme_bw(base_size=12)
+
+ggsave(filename = file.path(params$outdir, "site_counts.pdf"),dpi = 600, height=3,width=5,plot = site_count_fig)
+```
+\
+
+## Site Missingness Sensitivity
+
+
+Assessment of how many sites would be retained across various missingness thresholds. 
+
+  
+```{r missingness,fig.width=7,fig.height=5,echo=FALSE,message=FALSE,fig.align='center'}
+missingness_levels <- c(0.05, 0.10, 0.20, 0.25, 0.40, 0.50, 0.75, 0.90)
+
+# Init list to store each missingness level
+retained_sites_list <- list()
+
+# Loop through each missingness level
+for (missingness in missingness_levels) {
+  # Calculate the threshold for retaining sites
+  threshold_sens <- floor(nrow(t) * (1 - missingness))
+  
+  # Identify sites that appear in at least the threshold number of samples
+  retained_sites_sens <- site_counts[N >= threshold_sens, site]
+  
+  # Store the missingness level, threshold, and number of retained sites
+  retained_sites_list[[as.character(missingness)]] <- list(
+    Missingness = missingness,
+    N = threshold_sens,
+    sites = length(retained_sites_sens)
+  )
+}
+
+# Convert the retained_sites_list to a data frame
+missingness_sensitivity <- rbindlist(lapply(retained_sites_list, as.data.frame), fill = TRUE)
+
+# Plot missingness
+missing <- missingness_sensitivity %>% 
+  ggplot(aes(x=N,y=sites,col=as.factor(Missingness)))+
+  geom_point()+
+  scale_color_brewer('Missingness',palette = 'Spectral',direction = -1)+
+  ylab('Sites Retained')+xlab('Minimum Samples')+
+  theme_bw()
+missing + theme_bw(base_size=12)
+
+ggsave(filename = file.path(params$outdir, "missingness.pdf"),dpi = 600, height=3,width=5,plot = missing)
+```
+\
+
+Which libraries have the most sites sequenced within coverage thresholds?
+
+\
+
+
+```{r sample-missing, echo=FALSE,message=FALSE}
+# Output table with the worst samples 
+count_data <- combined_data %>% 
+  group_by(runid,bioid,batchid) %>% 
+  summarize(filtered_sites = n()) %>% ungroup
+  
+# Reorder runid based on the counts
+count_data <- count_data %>%
+  mutate(runid = factor(runid, levels = runid[order(filtered_sites)]))  %>% 
+  arrange(desc(filtered_sites))
+
+knitr::kable(count_data)
+write.csv(count_data,file.path(params$outdir,"Sample_Missingness.csv"),quote=F,row.names=F)
+```
+
+
+## Correlations
+
+Assess correlations between technical replicates (*intra-sample*) and among all biosamples (*inter-sample*). This is done using the following framework:
+
+  
+1. Subset a runid (replicate) for a bioid (biological replicate)
+
+2. Subset one of its other runids
+
+3. Subset n=1,000 sites, and calculate Spearman's correlation using 'complete.obs'
+
+4. Use `boot` to repeat the above using 1,000 resampling events
+
+5. Grab an inter-sample comparison (bioid != bioid), and `boot` the correlation again on 1,000 sites
+
+6. Repeat for each runid, and for each bioid 
+
+\
+
+```{r correlations,include=FALSE,echo=FALSE}
+##### Assess Correlations #####
+# Convert retained_data to data.table if not already
+setDT(retained_data)
+
+# Function to calculate correlation for bootstrap
+correlation_func <- function(data, indices) {
+  sampled_data <- data[indices, ]
+  cor(sampled_data[[1]], sampled_data[[2]], use = "complete.obs", method = "spearman")
+}
+
+# Bootstrap correlations for intra- and inter-sample, considering batch effects
+bootstrap_correlations <- function(data, biosamp, n_boot = 1000, n_CpGs = 1000) {
+  results <- list()
+  
+  # Intra-sample correlations for each runid pair
+  intra_results <- list()
+  intra_corrs <- data[bioid == biosamp, ]
+  runids <- unique(intra_corrs$runid)
+  for (i in 1:(length(runids) - 1)) {
+    for (j in (i + 1):length(runids)) {
+      runid_pair <- c(runids[i], runids[j])
+      intra_corrs_merged <- merge(
+        intra_corrs[runid == runid_pair[1], .(site, Percent_5mC, batchid)],
+        intra_corrs[runid == runid_pair[2], .(site, Percent_5mC, batchid)],
+        by = "site",
+        suffixes = c(".1", ".2")
+      )
+      n_intra_CpGs <- min(n_CpGs, nrow(intra_corrs_merged))
+      if (n_intra_CpGs > 0) {
+        intra_boot <- boot(
+          data = intra_corrs_merged[sample(.N, n_intra_CpGs), .(Percent_5mC.1, Percent_5mC.2)], 
+          statistic = correlation_func, 
+          R = n_boot
+        )
+        intra_results[[paste(runid_pair, collapse = "-")]] <- list(
+          correlation = boot.ci(intra_boot, type = "perc"),
+          batch_info = unique(intra_corrs_merged[, .(batchid.1, batchid.2)])
+        )
+      }
+    }
+  }
+  results$intra <- intra_results
+  
+  # Inter-sample correlations
+  inter_corrs <- data[bioid != biosamp, ]
+  inter_corrs_merged <- merge(
+    intra_corrs[runid == runids[1], .(site, Percent_5mC.1 = Percent_5mC)], 
+    inter_corrs[, .(site, Percent_5mC.2 = Percent_5mC)],
+    by = "site"
+  )
+  n_inter_CpGs <- min(n_CpGs, nrow(inter_corrs_merged))
+  inter_boot <- boot(
+    data = inter_corrs_merged[sample(.N, n_inter_CpGs), .(Percent_5mC.1, Percent_5mC.2)], 
+    statistic = correlation_func, 
+    R = n_boot
+  )
+  results$inter <- boot.ci(inter_boot, type = "perc")
+  
+  return(results)
+}
+
+# Main loop for each bioid
+bioids <- unique(retained_data$bioid)
+correlation_results <- setNames(lapply(bioids, function(bioid) {
+  bootstrap_correlations(retained_data, bioid)
+}), bioids)
+
+# Combine results into a data table
+intra_results <- rbindlist(lapply(names(correlation_results), function(bioid) {
+  if (!is.null(correlation_results[[bioid]]$intra)) {
+    res <- correlation_results[[bioid]]$intra
+    do.call(rbind, lapply(names(res), function(pair) {
+      data.table(
+        bioid = bioid,
+        runid_pair = pair,
+        intra_lower = res[[pair]]$correlation$percent[4],
+        intra_upper = res[[pair]]$correlation$percent[5],
+        batchid_1 = res[[pair]]$batch_info$batchid.1,
+        batchid_2 = res[[pair]]$batch_info$batchid.2
+      )
+    }))
+  }
+}), use.names = TRUE, fill = TRUE)
+
+inter_results <- rbindlist(lapply(names(correlation_results), function(bioid) {
+  if (!is.null(correlation_results[[bioid]]$inter)) {
+    res <- correlation_results[[bioid]]$inter
+    data.table(
+      bioid = bioid,
+      inter_lower = res$percent[4],
+      inter_upper = res$percent[5]
+    )
+  }
+}), use.names = TRUE, fill = TRUE)
+
+intra_results <- intra_results %>% mutate(BatchComparison = paste0(batchid_1,'-',batchid_2))
+```
+
+
+### Inter- vs Intra- sample Correlations
+
+The plot below shows the 95% CI inter-sample correlations with black error bars and the 95% CIs for all intra-sample (technical replicates) correlations with colors. Colors are assigned based on the batch IDs of each replicate. 
+\
+
+```{r biosample,message=FALSE,echo=FALSE,fig.width=10,fig.height=8,fig.align='center',fig.caption='Correlations within and among libraries for each biosample'}
+
+cols <- rainbow(length(unique(intra_results$BatchComparison)))
+
+# By each individual biosample
+run_effects_plot <- intra_results %>% 
+  ggplot(aes(y=bioid,col=BatchComparison,xmin=intra_lower,xmax=intra_upper))+
+  geom_errorbar(position=position_dodge(width=0.5),alpha=0.8)+
+  ylab('Biosample ID')+xlab("Spearman's Rho 95% CI")+
+  ggtitle('Inter- (black) vs. Intra- (colored) Correlations') +
+  scale_color_manual('Batch Effects',values=cols)+
+  geom_errorbar(data=inter_results,aes(xmin=inter_lower,xmax=inter_upper),width=0.25,lwd=2,col='black')+
+  theme_bw()
+run_effects_plot + theme_bw(base_size=12)
+```
+\
+\
+  
+### Intra-sample correlations across batches
+
+Is there a relationship with batch? This plot shows each batch comparison along the Y-axis (e.g. FirstBatchID - SecondBatchID), and the 95% CI midpoint from all respective comparisons.
+
+```{r batch,message=FALSE,echo=FALSE,fig.width=8,fig.height=6,fig.align='center',fig.caption='Correlations within and among batches'}
+# By batch
+batch_effects_plot <- intra_results %>% 
+  # use midpoint of 95% CI lower/upper rho 
+  mutate(midpoint = (intra_lower + intra_upper) / 2) %>% 
+  ggplot(aes(y=BatchComparison,x=midpoint))+
+  geom_boxplot()+
+  ylab('Batch Comparison')+xlab("Midpoint 95% CI Estimate of Spearman's Rho")+
+  ggtitle('Intra-sample Correlations Across Batches') +
+  theme_bw()
+batch_effects_plot + theme_bw(base_size=12)
+```
+\
+
+### Overall Intra- vs Inter- sample Correlations
+
+\
+
+Overall, what are the inter- and intra- sample correlations? This plot shows the midpoint of the 95% CIs for each contrast (`mutate(midpoint = (lower + upper) / 2) `). This will output *n* = biosample values for `Inter-sample` comparisons, while intra- sample comparisons will depend on the number of replicates available for each biosample.
+
+\
+
+  
+```{r overall,message=FALSE,echo=FALSE,fig.width=6,fig.height=4,fig.align='center',fig.caption='Correlations overall across all samples'}
+# Overall
+overall_plot <- rbind(
+  inter_results %>% select(bioid,lower=inter_lower,upper=inter_upper) %>% mutate(Contrast = 'Inter-sample'),
+  intra_results %>% select(bioid,lower=intra_lower,upper=intra_upper) %>% mutate(Contrast = 'Intra-sample')
+  ) %>% 
+  mutate(midpoint = (lower + upper) / 2) %>% 
+  ggplot(aes(x=Contrast, y=midpoint,fill=Contrast))+
+  geom_boxplot()+
+  xlab('')+ylab("Midpoint 95% CI Estimate of Spearman's Rho")+
+  ggtitle('Intra- vs . Inter- sample Correlations Overall') +
+  theme_bw()
+overall_plot + theme_bw(base_size=12)
+
+# Save it all 
+ggsave(filename = file.path(params$outdir, "run_correlations.pdf"),dpi = 600,height=6,width=9,plot = run_effects_plot)
+ggsave(filename = file.path(params$outdir, "batch_correlations.pdf"),dpi = 600,height=6,width=9,plot = batch_effects_plot)
+ggsave(filename = file.path(params$outdir, "overall_correlations.pdf"),dpi = 600,height=6,width=9,plot = overall_plot)
+
+write.csv(intra_results,file.path(params$outdir,"Intrasample_Correlations.csv"),quote=F,row.names=F)
+write.csv(inter_results,file.path(params$outdir,"Intersample_Correlations.csv"),quote=F,row.names=F)
+```
+
+
+## Batch Effects
+
+
+### PCA Assessment
+
+  
+Using the retained and filtered sites, impute missing data with [missMDA](https://doi.org/10.18637/jss.v070.i01) and perform a PCA. The plot below shows axes 1-4, colored according to batch effects. 
+
+```{r pcas,message=FALSE,echo=FALSE,fig.width=8,fig.height=5,fig.align='center',fig.caption='Relationship between batch effects and overall variation, with imputation and with no missing data'}
+##### Batch Effect PCAs #####
+setDT(retained_data)
+
+#Pivot the data to wide format using data.table directly (more efficient)
+pca_data <- dcast(retained_data, site ~ runid, value.var = "Percent_5mC")
+
+# Remove sites with zero variance
+# Calculate variance across each site's Percent_5mC for all runids and filter
+variance_data <- pca_data[, .(variance = apply(.SD, 1, var, na.rm = TRUE)), by = site]
+sites_without_variance <- variance_data[variance == 0, site]
+
+# Filter the original pca_data to keep only those sites with variance
+pca_data <- pca_data[!site %in% sites_without_variance]
+
+# Prepare matrix for PCA
+# Remove the 'site' column and transpose the matrix
+pca_matrix <- t(as.matrix(pca_data[, -"site", with = FALSE]))
+
+# Step 4: Impute missing data using PCA
+imputed_data <- imputePCA(pca_matrix, ncp = 2, scale = TRUE, method = 'Regularized')
+
+# Perform PCA on the imputed data
+pca_results <- PCA(imputed_data$completeObs, ncp = 4, scale.unit = TRUE, graph = FALSE)
+
+# Create a data frame for plotting
+pca_scores <- as.data.table(pca_results$ind$coord)
+pca_scores[, runid := names(pca_data[, -1])]
+
+# Join with the batch information
+batch_info <- unique(retained_data[, .(runid, batchid)])
+pca_long <- pca_scores %>% pivot_longer(!runid, names_to = 'PC')
+pca_in <- left_join(pca_long,batch_info)
+pca_in$batchid <- factor(pca_in$batchid)
+
+# Eigs 
+eigs <- data.frame(pve = pca_results$eig[,2])
+
+# Plot PCs 1-2
+batchcol <- data.frame(batchid = unique(pca_in$batchid),
+                       batchcol = viridis(n_distinct(pca_in$batchid)))
+
+pc12 <- pca_in %>% filter(PC %in% c('Dim.1','Dim.2')) %>% 
+  pivot_wider(names_from = PC,values_from = value) %>% 
+  ggplot(aes(x = Dim.1, y = Dim.2, color = batchid)) +
+  geom_point() +
+  labs(title = "Imputed: PC1 vs PC2", 
+       x = paste0('PC1: ',round(eigs[1,1],2),'%'), 
+       y = paste0('PC2: ',round(eigs[2,1],2),'%')) +
+  scale_color_manual(values=batchcol$batchcol,breaks=batchcol$batchid)+
+  theme_bw(base_size=12)
+
+# Plot PCs 3-4
+pc34 <- pca_in %>% filter(PC %in% c('Dim.3','Dim.4')) %>% 
+  pivot_wider(names_from = PC,values_from = value) %>% 
+  ggplot(aes(x = Dim.3, y = Dim.4, color = batchid)) +
+  geom_point() +
+  labs(title = "Imputed: PC3 vs PC4", 
+       x = paste0('PC3: ',round(eigs[3,1],2),'%'), 
+       y = paste0('PC4: ',round(eigs[4,1],2),'%')) +
+  scale_color_manual(values=batchcol$batchcol,breaks=batchcol$batchid)+
+  theme_bw(base_size=12)
+
+pcas <- ggarrange(pc12,pc34,common.legend = TRUE) 
+pcas
+
+# Save
+ggsave(filename = file.path(params$outdir, "pcas_batch.pdf"),dpi = 600,height=4,width=7,plot = pcas)
+write.csv(pca_in,file.path(params$outdir,"pc_scores_imputed.csv"),quote=F,row.names=F)
+```
+
+\
+
+### Quantifying Batch Effects
+
+Batch effects can be quantified directly with a RDA using [vegan](https://github.com/vegandevs/vegan). The model is `rda(pc_axes ~ batchid)`. 
+
+
+
+```{r rda,message=FALSE,echo=FALSE,fig.width=7,fig.height=5,fig.align='center',fig.caption='RDA assessing variation explained by batch effects'}
+# perform RDA with vegan to quantify the impacts of batch
+pca_data_wide <- pca_in %>% pivot_wider(names_from = PC, values_from = value, id_cols = c(runid, batchid))
+components <- select(pca_data_wide,starts_with('Dim'))
+
+# Removing 'runid' column as it's not required for RDA
+rda_model <- rda(components, pca_data_wide$batchid)
+
+# get R2
+rda_sum <- summary(rda_model)
+adjr <- RsquareAdj(rda_model)$adj.r.squared
+
+# Prep colors
+colors <- setNames(batchcol$batchcol,batchcol$batchid)
+
+# You may need to modify this - it modifies the scaling of the biplot arrows
+scaling_factor <- 5
+
+# Make a function for plotting 
+create_rda_plot <- function(rda_model, pca_data_wide) {
+  # Base plot setup
+  plot(rda_model, type = "n")
+  
+  # Adding points for sites
+  with(pca_data_wide, points(rda_model, col = colors[batchid], pch = 16))
+  
+  # Add the title
+  title(paste0('Batch Effect adj. R2: ', round(adjr, 3)))
+}
+
+# Make plot 
+create_rda_plot(rda_model, pca_data_wide)  
+
+```
+
+```{r saverda,echo=FALSE,include=FALSE,message=FALSE}
+# Also save it 
+pdf(file.path(params$outdir,"rda_imputed.pdf"), height = 5, width = 6)
+create_rda_plot(rda_model, pca_data_wide)  
+dev.off()
+```
