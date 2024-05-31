@@ -7,7 +7,7 @@ Simple tool for assessing technical repeatability and batch effects using Bismar
 
 ### Installation
 
-Installation (only unix currently tested) can be installed via conda (~600 Mb). You can also run the chunks directly in R using the template script in `/cytoseen/` using some commonly distributed packages installable via CRAN (see FAQ). 
+Installation (only unix currently tested) can be installed via conda (~100 Mb). You can also run the chunks directly in R using the template script in `/cytoseen/` using some commonly distributed packages installable via CRAN (see FAQ). 
 
 ```
 conda config --add channels heritabilities
@@ -20,7 +20,7 @@ cp $CONDA_PREFIX/lib/python3.11/site-packages/cytoseen/cytoseen.Rmd $CONDA_PREFI
 chmod +x $CONDA_PREFIX/bin/*
 ```
 
-:warning: **IMPORTANT!!!**: the command `cytoseen` needs access to two scripts: `render_report.R` and `cytoseen.Rmd`. Ensure you `cp` them above (either from the `site_packages`, or from the git repo). 
+:warning: **IMPORTANT!!!**: the command `cytoseen` needs access to two scripts in your $PATH: `render_report.R` and `cytoseen.Rmd`. Ensure you `cp` them above to add them into your environment's path, or grab from the git repo into your current working directory. 
 
 
 You should be able to call the program with:
@@ -42,6 +42,17 @@ options:
   --outdir OUTDIR       Output directory
   --covdir COVDIR       Directory to the Bismark coverage files
 ```
+
+A minimal example can be run with 6 `cov.gz` files by cloning the repo and running it:
+
+```
+git clone git@github.com:merondun/CytoSeen.git
+cd CytoSeen
+cytoseen --info examples/info.csv --outdir examples/outdir/ --covdir examples/biscov/
+```
+
+Which should print some markdown syntax and create the output files in the outdir directory. 
+
 
 ### Usage
 
@@ -91,7 +102,7 @@ retained_data <- combined_data[site %in% retained_sites]
 
 ### Outputs
 
-The script does not produce any console output during processing because it renders the output into a RMarkdown `.html` report. After the script finishes successfully, all the results will be compiled into a [CytoSeen.html](examples/outdir/CytoSeen.html) report within the specified output directory (open in browser). 
+The script does not produce any console output during processing because it renders the output into a RMarkdown `.html` report. After the script finishes successfully, all the results will be compiled into a [CytoSeen.html](examples/CytoSeen.html) report within the specified output directory (open in browser). 
 
 * `CytoSeen.html` Compiled report, open in any browser. 
 
@@ -102,6 +113,9 @@ All figures and tables are also saved as respective `.pdf` and `.csv`:
 * `Sample_Missingness.csv` How many sites are retained for each library after coverage filters? 
 * `Intersample_Correlations.csv` For each sample (biosample), what are the 95% CI correlations compared to other samples? 
 * `Intrasample_Correlations.csv` For each replicated sample (biosample), what are the intra-sample correlations, for each replicate? 
+
+:exclamation: If any of your bioid do not have a replicate, they will have 'NA' in this `.csv`, and the report will generate some warnings about non-finite values
+
 * `run_correlations.pdf` Within each replicated sample, how do intra-sample (replicates) compare to inter-sample correlations? 
 * `batch_correlations.pdf` How correlated are intra-sample libraries across batches? 
 * `overall_correlations.pdf` Overall, what are correlations within and between biosamples? 
