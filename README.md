@@ -5,10 +5,10 @@ Simple tool for assessing technical repeatability and batch effects using Bismar
 
 ## Methylation Reproducibility Reports
 
-- [Installation](###installation)
-- [Usage](###usage)
-- [Outputs](###outputs)
-- [FAQ](###faq)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Outputs](#outputs)
+- [FAQ](#faq)
 
 ### Installation
 
