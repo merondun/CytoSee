@@ -60,11 +60,12 @@ The script takes a simple input, **comma separated**, with details for each libr
 ```
 head info.csv
 biscov,runid,bioid,batchid
-/dss/dsshome1/lxc07/di39dux/merondun/CytoSeen/examples/biscov/B2V8841_BL_ADL_F__SRR25143965.cov.gz,B2V8841_BL_ADL_F__SRR25143965,B2V8841_BL_ADL_F,Kiel_EMSeq_MspI
-/dss/dsshome1/lxc07/di39dux/merondun/CytoSeen/examples/biscov/B2X3498_BL_ADL_M__SRR25143972.cov.gz,B2X3498_BL_ADL_M__SRR25143972,B2X3498_BL_ADL_M,Kiel_EMSeq_MspI
-/dss/dsshome1/lxc07/di39dux/merondun/CytoSeen/examples/biscov/B2X3498_BL_ADL_M__SRR25143974.cov.gz,B2X3498_BL_ADL_M__SRR25143974,B2X3498_BL_ADL_M,Kiel_EMSeq_MspI
-/dss/dsshome1/lxc07/di39dux/merondun/CytoSeen/examples/biscov/B2X4825_BL_ADL_M__SRR25143963.cov.gz,B2X4825_BL_ADL_M__SRR25143963,B2X4825_BL_ADL_M,Kiel_EMSeq_MspI
-/dss/dsshome1/lxc07/di39dux/merondun/CytoSeen/examples/biscov/B2V8841_BL_ADL_F__SRR25143966.cov.gz,B2V8841_BL_ADL_F__SRR25143966,B2V8841_BL_ADL_F,Kiel_EMSeq_WGS
+B2V8841_BL_ADL_F__SRR25143965.cov.gz,B2V8841_BL_ADL_F__SRR25143965,B2V8841_BL_ADL_F,Kiel_EMSeq_MspI
+B2X3498_BL_ADL_M__SRR25143972.cov.gz,B2X3498_BL_ADL_M__SRR25143972,B2X3498_BL_ADL_M,Kiel_EMSeq_MspI
+B2X3498_BL_ADL_M__SRR25143974.cov.gz,B2X3498_BL_ADL_M__SRR25143974,B2X3498_BL_ADL_M,Kiel_EMSeq_MspI
+B2X4825_BL_ADL_M__SRR25143963.cov.gz,B2X4825_BL_ADL_M__SRR25143963,B2X4825_BL_ADL_M,Kiel_EMSeq_MspI
+B2X4825_BL_ADL_M__SRR10606826.cov.gz,B2X4825_BL_ADL_M__SRR10606826,B2X4825_BL_ADL_M,Kiel_RRBS
+B2X4825_BL_ADL_M__SRR10606843.cov.gz,B2X4825_BL_ADL_M__SRR10606843,B2X4825_BL_ADL_M,Kiel_RRBS
 ```
 
 The command `CytoSeen -h` accepts these arguments: 
@@ -73,8 +74,8 @@ The command `CytoSeen -h` accepts these arguments:
 * `--min_cov` Minimum read coverage to retain a site for each library. (`countM + countU >= min_cov`) [default: 20]
 * `--max_cov` Maximum read coverage to retain a site for each library. (`countM + countU <= min_cov`) [default: 200]
 * `--max_missing` Drop sites where more than this proportion of libraries are missing.  [default: 0.1]
-* `--outdir` **full path** to directory for output files. 
-* `--basedir` **full path** to the `CytoSeen` install directory. Find this with `which CytoSeen` if installed with conda, typically something like `/dss/dsshome1/lxc07/di39dux/mambaforge/envs/CytoSeen/bin/cytoseen`. 
+* `--outdir` directory for output files. 
+* `--covdir` directory with the bismark coverage files. 
 
 
 Logic for filtering missingness:
