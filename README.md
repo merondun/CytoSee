@@ -68,7 +68,7 @@ This script analyzes variation between technical replicates and batches, so *a s
 
 The script takes a simple input table with details of each libray - **comma separated**. The four columns with headers are:
 
-* `biscov`: **full path** to the library [Bismark cov.gz](https://felixkrueger.github.io/Bismark/bismark/methylation_extraction/) file. This file has format (chr, pos, pos, methylation percent, read count methylated, read count unmethylated).  
+* `biscov`: file names for each library [Bismark cov.gz](https://felixkrueger.github.io/Bismark/bismark/methylation_extraction/) file. This file has format (chr, pos, pos, methylation percent, read count methylated, read count unmethylated).  
 * `runid`: library ID. This is a distinct ID given to each library, synonymous with a 'RUN' ID from the NCBI.  
 * `bioid`: sample ID. This ID is a sample ID which connects runs, synonymous with 'BIOSAMPLE' from the NCBI.
 * `batchid`: an arbitrary batch ID. Examples could be plate ID, sequencing facility, library protocol. 
@@ -95,7 +95,7 @@ The command `CytoSeen -h` accepts these arguments:
 * `--covdir` directory with the bismark coverage files. 
 
 
-Logic for filtering missingness:
+**Logic for filtering missingness:**
 
 ```
 # Calculate the threshold for retaining sites, always round down 
@@ -104,6 +104,24 @@ threshold <- floor(nrow(t) * (1 - params$max_missing))
 # Identify sites that appear in at least the threshold number of samples
 retained_sites <- site_counts[N >= threshold, site]
 retained_data <- combined_data[site %in% retained_sites]
+
+**Logic for assessing inter- and intra- correlations:**
+
+1. Subset a runid (replicate) for a bioid (biological replicate)
+2. Subset one of its other runids
+3. Subset n=1,000 sites, and calculate Spearman's correlation using `complete.obs`
+4. Use `boot` to repeat the above using 1,000 resampling events
+5. Grab an inter-sample comparison (bioid != bioid), and `boot` the correlation again on 1,000 sites
+6. Repeat for each runid, and for each bioid 
+
+**Logic for PCA/RDA:**
+
+1. Taking the overlapping, coverage filtered sites filtered for missingness
+2. Impute missing values using [missMDA](http://factominer.free.fr/missMDA/)
+3. Create a PCA and output 4 PCs using [FactoMineR](http://factominer.free.fr/)
+4. Use [vegan](https://github.com/vegandevs/vegan) for RDA: `(PC_axes ~ batchid)`
+
+
 ```
 
 ### Outputs
