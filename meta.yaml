@@ -1,0 +1,62 @@
+package:
+  name: cytoseen
+  version: "0.1.1"
+
+source:
+  path: .
+  
+build:
+  script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv"
+  entry_points:
+    - cytoseen=cytoseen.cytoseen:main
+  script_files:
+    - cytoseen/render_report.R
+    - cytoseen/cytoseen.Rmd
+
+requirements:
+  host:
+    - python >=3.6
+    - pip
+    - r-base
+    - r-optparse
+    - r-dplyr
+    - r-ggplot2
+    - r-data.table
+    - r-boot
+    - r-tidyr
+    - r-missmda
+    - r-factominer
+    - r-ggpubr
+    - r-viridis
+    - r-vegan
+    - r-rmarkdown
+    - r-knitr
+  run:
+    - python >=3.6
+    - r-base
+    - r-optparse
+    - r-dplyr
+    - r-ggplot2
+    - r-data.table
+    - r-boot
+    - r-tidyr
+    - r-missmda
+    - r-factominer
+    - r-ggpubr
+    - r-viridis
+    - r-vegan
+    - r-rmarkdown
+    - r-knitr
+
+test:
+  imports:
+    - cytoseen
+
+about:
+  home: "https://github.com/merondun/CytoSeen"
+  license: "GPL3"
+  summary: "Methylation Reproducibility Metrics from Bismark Coverage Files"
+
+extra:
+  recipe-maintainers:
+    - merondun
