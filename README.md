@@ -1,9 +1,14 @@
-![CytoSeen](/examples/Logo.png)
+![CytoSeen](/examples/figs/Logo.png)
 
 Simple tool for assessing technical repeatability and batch effects using Bismark coverage files. 
 
 
 ## Methylation Reproducibility Reports
+
+- [Installation](###installation)
+- [Usage](###usage)
+- [Outputs](###outputs)
+- [FAQ](###faq)
 
 ### Installation
 
@@ -11,16 +16,17 @@ Installation (only unix currently tested) can be installed via conda (~100 Mb). 
 
 ```
 conda config --add channels heritabilities
-conda create -n CytoSeen cytoseen
+conda create -n CytoSeen cytoseen -y
 conda activate CytoSeen
 
-# Now, we must copy the R and Rmd files into the bin directory so they are in our path within this env 
+# Now, we must copy the R and Rmd files into the bin directory so they are in our path within this env
+# These paths will need to be modified on win and osx!
 cp $CONDA_PREFIX/lib/python3.11/site-packages/cytoseen/render_report.R $CONDA_PREFIX/bin/
 cp $CONDA_PREFIX/lib/python3.11/site-packages/cytoseen/cytoseen.Rmd $CONDA_PREFIX/bin/
 chmod +x $CONDA_PREFIX/bin/*
 ```
 
-:warning: **IMPORTANT!!!**: the command `cytoseen` needs access to two scripts in your $PATH: `render_report.R` and `cytoseen.Rmd`. Ensure you `cp` them above to add them into your environment's path, or grab from the git repo into your current working directory. 
+:warning: **IMPORTANT!!!**: the command `cytoseen` needs access to two scripts: `render_report.R` and `cytoseen.Rmd`. Ensure you `cp` them above to add them into your environment's path, **or** simply copy them to your current directory as it will scan for those files. It was successful you can `render_report.R -h`. 
 
 
 You should be able to call the program with:
@@ -109,19 +115,69 @@ The script does not produce any console output during processing because it rend
 All figures and tables are also saved as respective `.pdf` and `.csv`:
 
 * `site_counts.pdf` How many sites are retained based on the number of libraries sequenced at coverage and missingness thresholds. 
+
+![site_counts](/examples/figs/site_counts.png)
+
 * `missingness.pdf` How do variable missngness thresholds impact site retainment? 
+
+![missingnes](/examples/figs/missingness.png)
+
 * `Sample_Missingness.csv` How many sites are retained for each library after coverage filters? 
+
+| runid                         | bioid            | batchid         | filtered_sites |
+| ----------------------------- | ---------------- | --------------- | -------------- |
+| B2X4825_BL_ADL_M__SRR25143963 | B2X4825_BL_ADL_M | Kiel_EMSeq_MspI | 934326         |
+| B2X3498_BL_ADL_M__SRR25143974 | B2X3498_BL_ADL_M | Kiel_EMSeq_MspI | 898362         |
+| B2V8841_BL_ADL_F__SRR25143965 | B2V8841_BL_ADL_F | Kiel_EMSeq_MspI | 450185         |
+
 * `Intersample_Correlations.csv` For each sample (biosample), what are the 95% CI correlations compared to other samples? 
+
+| bioid            | inter_lower | inter_upper |
+| ---------------- | ----------- | ----------- |
+| B2V8841_BL_ADL_F | 0.887912    | 0.912634    |
+| B2X3498_BL_ADL_M | 0.849319    | 0.887922    |
+
 * `Intrasample_Correlations.csv` For each replicated sample (biosample), what are the intra-sample correlations, for each replicate? 
 
 :exclamation: If any of your bioid do not have a replicate, they will have 'NA' in this `.csv`, and the report will generate some warnings about non-finite values
 
+| bioid            | runid_pair                                                  | batchid_1       | batchid_2       | intra_lower | intra_upper | BatchComparison                 |
+| ---------------- | ----------------------------------------------------------- | --------------- | --------------- | ----------- | ----------- | ------------------------------- |
+| B2V8841_BL_ADL_F | B2V8841_BL_ADL_F__SRR25143965-B2V8841_BL_ADL_F__SRR25143965 | Kiel_EMSeq_MspI | Kiel_EMSeq_MspI | NA          | NA          | Kiel_EMSeq_MspI-Kiel_EMSeq_MspI |
+| B2X3498_BL_ADL_M | B2X3498_BL_ADL_M__SRR25143972-B2X3498_BL_ADL_M__SRR25143974 | Kiel_EMSeq_MspI | Kiel_EMSeq_MspI | 0.902422    | 0.926456    | Kiel_EMSeq_MspI-Kiel_EMSeq_MspI |
+| B2X4825_BL_ADL_M | B2X4825_BL_ADL_M__SRR25143963-B2X4825_BL_ADL_M__SRR10606826 | Kiel_EMSeq_MspI | Kiel_RRBS       | 0.918279    | 0.936742    | Kiel_EMSeq_MspI-Kiel_RRBS       |
+| B2X4825_BL_ADL_M | B2X4825_BL_ADL_M__SRR10606826-B2X4825_BL_ADL_M__SRR10606843 | Kiel_RRBS       | Kiel_RRBS       | 0.953668    | 0.964198    | Kiel_RRBS-Kiel_RRBS             |
+
 * `run_correlations.pdf` Within each replicated sample, how do intra-sample (replicates) compare to inter-sample correlations? 
+
+![run_correlations](/examples/figs/run_correlations.png)
+
 * `batch_correlations.pdf` How correlated are intra-sample libraries across batches? 
+
+![batch_correlations](/examples/figs/batch_correlations.png)
+
 * `overall_correlations.pdf` Overall, what are correlations within and between biosamples? 
+
+![overall_correlations](/examples/figs/overall_correlations.png)
+
 * `pc_scores_imputed.csv` PC scores (axes 1 - 4) for individuals. Missing data was imputed with missMDA.
+
+| runid                         | PC    | value    | batchid         |
+| ----------------------------- | ----- | -------- | --------------- |
+| B2V8841_BL_ADL_F__SRR25143965 | Dim.1 | 152.4433 | Kiel_EMSeq_MspI |
+| B2V8841_BL_ADL_F__SRR25143965 | Dim.2 | 201.7434 | Kiel_EMSeq_MspI |
+| B2V8841_BL_ADL_F__SRR25143965 | Dim.3 | -99.7554 | Kiel_EMSeq_MspI |
+| B2V8841_BL_ADL_F__SRR25143965 | Dim.4 | 78.40086 | Kiel_EMSeq_MspI |
+| B2X3498_BL_ADL_M__SRR25143972 | Dim.1 | 136.2201 | Kiel_EMSeq_MspI |
+
 * `pcas_batch.pdf` PCs 1 - 4, color-coded by batch. 
+
+![pcas_batch](/examples/figs/pcas_batch.png)
+
 * `rda_imputed.pdf` RDA quantifying the effects of batch on overall variation.
+
+![rda_imputed](/examples/figs/rda_imputed.png)
+
 * `BSobj_methylationcounts.csv.gz` a gzipped long-form table with the filtered sites, in this format:
 
 ```
