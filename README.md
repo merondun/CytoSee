@@ -17,7 +17,7 @@ Simple tool for assessing technical repeatability and batch effects using Bismar
 
 ### Installation
 
-Installation (only unix currently tested) can be installed via conda (~100 Mb). You can also run the chunks directly in R using the template script in `/cytoseen/` using some commonly distributed packages installable via CRAN (see FAQ). 
+Installation (only unix & win-64 currently tested) can be installed via conda (~100 Mb). You can also run the chunks directly in R using the template script in `/cytoseen/` using some commonly distributed packages installable via CRAN (see FAQ). 
 
 ```
 conda config --add channels heritabilities
@@ -243,7 +243,7 @@ BSobj
 
 The primary `.Rmd` script can be easily debugged in RStudio and run line-by-line using the `/cytoseen/cytoseen_Rtemplate.R` script. 
 
-For any problems please open an issue or contact Justin Merondun: heritabilites [at] gmail.com
+For any problems or enhancement suggestions please open an issue or contact Justin Merondun: heritabilites [at] gmail.com
 
 
 ### FAQ
